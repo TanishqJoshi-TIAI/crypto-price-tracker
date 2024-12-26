@@ -3,7 +3,8 @@ package provider
 import (
 	"crypto-price-tracker/config"
 	"crypto-price-tracker/responsestruct"
-	"errors"
+	"fmt"
+	"log"
 )
 
 const (
@@ -13,8 +14,9 @@ const (
 func FetchPrices() (responsestruct.ResponseStruct, error) {
 	switch config.APIProvider {
 	case CoinDesk:
-		return GetPricesFromCoinDeskAPI(), nil
+		return GetPricesFromCoinDeskAPI()
 	default:
-		return responsestruct.ResponseStruct{}, errors.New("API provider not supported")
+		log.Println("[WARN] No such provider " + config.APIProvider)
+		return responsestruct.ResponseStruct{}, fmt.Errorf("API provider '%s' not supported", config.APIProvider)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"crypto-price-tracker/config"
 	"crypto-price-tracker/responsestruct"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -37,25 +38,34 @@ type CurrencyInfo struct {
 	RateFloat   float64 `json:"rate_float"`
 }
 
-func GetPricesFromCoinDeskAPI() responsestruct.ResponseStruct {
+func GetPricesFromCoinDeskAPI() (responsestruct.ResponseStruct, error) {
+	var result responsestruct.ResponseStruct
+
 	res, err := http.Get(config.CoinDeskAPIProviderURL)
-	config.LastFetchedAPITime = time.Now()
+	tempLastFetchedAPITime := time.Now()
+
 	if err != nil {
-		log.Fatal(err)
+		log.Println("error fetching data from CoinDesk: ", err)
+		return result, fmt.Errorf("error fetching data from CoinDesk: %w", err)
 	}
+
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("error reading response body: ", err)
+		return result, fmt.Errorf("error reading response body: %w", err)
 	}
+
 	var response CoinDeskResponse
-	var result responsestruct.ResponseStruct
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("error unmarshalling JSON: ", err)
+		return result, fmt.Errorf("error unmarshalling JSON: %w", err)
 	}
+
 	result.CryptoName = response.ChartName
 	result.PriceInEUR = response.Bpi.EUR.Rate
 	result.PriceInUSD = response.Bpi.USD.Rate
-	return result
+	config.LastFetchedAPITime = tempLastFetchedAPITime
+	return result, nil
 }

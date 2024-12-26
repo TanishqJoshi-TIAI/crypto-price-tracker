@@ -3,13 +3,13 @@ package service
 import (
 	"crypto-price-tracker/config"
 	"crypto-price-tracker/provider"
-	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"time"
 )
 
 func CheckAPIExpiry() bool {
-	if time.Since(config.LastFetchedAPITime) > config.CacheExpiry {
+	if config.LastFetchedAPITime.IsZero() || time.Since(config.LastFetchedAPITime) > config.CacheExpiry {
 		return true
 	}
 	return false
@@ -17,20 +17,15 @@ func CheckAPIExpiry() bool {
 
 func GetCryptoPrice() (gin.H, error) {
 	isAPIExpired := CheckAPIExpiry()
-	APINotSupported := false
 	if isAPIExpired {
 		result, err := provider.FetchPrices()
 		if err != nil {
-			APINotSupported = true
+			return gin.H{}, fmt.Errorf("failed to fetch cryptocurrency prices: %w", err)
 		} else {
 			config.CryptoName = result.CryptoName
 			config.CryptoPriceInEUR = result.PriceInEUR
 			config.CryptoPriceInUSD = result.PriceInUSD
 		}
-	}
-
-	if APINotSupported {
-		return gin.H{}, errors.New("API Provider not supported")
 	}
 
 	return gin.H{
